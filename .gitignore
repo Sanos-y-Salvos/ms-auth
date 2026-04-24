@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+
+# Compilación
+dist/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Coverage (para cuando agregues tests)
+coverage/
