@@ -20,3 +20,4 @@ AppDataSource.initialize()
 // Autenticación con JWT #4
 // Refresh Token y Renovación #5
 // Recuperación de Contraseña #6
+// Cierre de Sesión (Logout) #7
