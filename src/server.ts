@@ -16,3 +16,5 @@ AppDataSource.initialize()
   .catch((err) => {
     console.error('❌ Error al conectar la base de datos:', err);
   });
+
+// Autenticación con JWT
