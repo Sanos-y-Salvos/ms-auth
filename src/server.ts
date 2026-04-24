@@ -17,5 +17,6 @@ AppDataSource.initialize()
     console.error('❌ Error al conectar la base de datos:', err);
   });
 
-// Autenticación con JWT
-// Refresh Token y Renovación
+// Autenticación con JWT #4
+// Refresh Token y Renovación #5
+// Recuperación de Contraseña #6
