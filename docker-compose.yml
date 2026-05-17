@@ -41,6 +41,9 @@ services:
   ms-auth:
     container_name: ms-auth
     image: felruiz/ms-auth:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     platform: linux/amd64
     environment:
       NODE_ENV: production
