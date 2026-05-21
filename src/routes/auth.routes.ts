@@ -9,9 +9,9 @@ const router = Router();
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Registro de credenciales (RF-05)
+ *     summary: Registro de credenciales (interno — emergencia)
  *     tags: [Auth]
- *     description: Llamado exclusivamente por MS-02. El rol es determinado por MS-02 según el tipo de registro.
+ *     description: Endpoint interno legacy. Desde v2.0.0 las credenciales se crean automáticamente al consumir el evento `user.registered` del broker. Solo usar como herramienta administrativa si el evento se pierde o se necesita reparación manual.
  *     parameters:
  *       - in: header
  *         name: x-api-key
@@ -148,9 +148,9 @@ router.get('/me', verifyToken, AuthController.getMe);
  * @swagger
  * /api/auth/credentials/{id}/role:
  *   patch:
- *     summary: Actualizar rol de credencial
+ *     summary: Actualizar rol de credencial (interno — emergencia)
  *     tags: [Auth]
- *     description: Endpoint interno. Solo llamado por MS-02 cuando el rol de un usuario cambia.
+ *     description: Endpoint interno legacy. Desde v2.0.0 los cambios de rol se sincronizan automáticamente vía evento `user.updated` del broker. Solo usar como herramienta administrativa de emergencia.
  *     parameters:
  *       - in: header
  *         name: x-api-key
@@ -182,101 +182,15 @@ router.get('/me', verifyToken, AuthController.getMe);
  *       404:
  *         description: Credencial no encontrada
  */
-/**
- * @swagger
- * /api/auth/forgot-password:
- *   post:
- *     summary: Solicitar código OTP para recuperar contraseña
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email]
- *             properties:
- *               email:
- *                 type: string
- *                 example: test@sanos.cl
- *     responses:
- *       200:
- *         description: Respuesta genérica independiente de si el correo existe (medida de seguridad)
- */
-router.post('/forgot-password', AuthController.forgotPassword);
-
-/**
- * @swagger
- * /api/auth/reset-password:
- *   patch:
- *     summary: Verificar OTP y cambiar contraseña
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, code, newPassword]
- *             properties:
- *               email:
- *                 type: string
- *                 example: test@sanos.cl
- *               code:
- *                 type: string
- *                 example: "123456"
- *               newPassword:
- *                 type: string
- *                 example: "nuevapass123"
- *     responses:
- *       200:
- *         description: Contraseña actualizada correctamente
- *       400:
- *         description: Código inválido o expirado
- */
-router.patch('/reset-password', AuthController.resetPassword);
-
-/**
- * @swagger
- * /api/auth/change-password:
- *   patch:
- *     summary: Cambiar contraseña del usuario autenticado
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [currentPassword, newPassword]
- *             properties:
- *               currentPassword:
- *                 type: string
- *                 example: "123456"
- *               newPassword:
- *                 type: string
- *                 example: "nueva123"
- *     responses:
- *       200:
- *         description: Contraseña actualizada correctamente
- *       400:
- *         description: La contraseña actual es incorrecta o la nueva tiene menos de 6 caracteres
- *       401:
- *         description: Token requerido
- */
-router.patch('/change-password', verifyToken, AuthController.changePassword);
-
 router.patch('/credentials/:id/role', internalAuth, AuthController.updateRole);
 
 /**
  * @swagger
  * /api/auth/credentials/{id}/deactivate:
  *   patch:
- *     summary: Desactivar credencial (interno)
+ *     summary: Desactivar credencial (interno — emergencia)
  *     tags: [Auth]
- *     description: Endpoint interno. Solo llamado por MS-02 al desactivar una cuenta.
+ *     description: Endpoint interno legacy. Desde v2.0.0 las desactivaciones se sincronizan automáticamente vía evento `user.deleted` del broker. Solo usar como herramienta administrativa de emergencia.
  *     parameters:
  *       - in: header
  *         name: x-api-key
@@ -300,9 +214,9 @@ router.patch('/credentials/:id/deactivate', internalAuth, AuthController.deactiv
  * @swagger
  * /api/auth/credentials/{id}:
  *   delete:
- *     summary: Eliminar credencial (interno — rollback)
+ *     summary: Eliminar credencial (interno — emergencia)
  *     tags: [Auth]
- *     description: Endpoint interno. Solo llamado por MS-02 para hacer rollback cuando el registro de usuario falla tras crear la credencial.
+ *     description: Endpoint interno. Herramienta administrativa de emergencia para eliminar una credencial huérfana. Desde v2.0.0, ms-users es fuente de verdad y NO hace rollback automático; los eventos quedan en cola y se procesan al recuperar conexión.
  *     parameters:
  *       - in: header
  *         name: x-api-key
@@ -320,7 +234,39 @@ router.patch('/credentials/:id/deactivate', internalAuth, AuthController.deactiv
  */
 router.delete('/credentials/:id', internalAuth, AuthController.deleteCredential);
 
-// Interno — Buscar credential_id por email (usado por ms-soporte)
+/**
+ * @swagger
+ * /api/auth/interno/por-email:
+ *   post:
+ *     summary: Buscar credential_id por email (interno)
+ *     tags: [Auth]
+ *     description: Endpoint interno. Usado por otros microservicios (ms-soporte) para resolver el credential_id a partir del email del usuario.
+ *     parameters:
+ *       - in: header
+ *         name: x-api-key
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: API key interna compartida entre microservicios
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: test@sanos.cl
+ *     responses:
+ *       200:
+ *         description: Credential encontrada (o objeto vacío si no existe)
+ *       400:
+ *         description: Email requerido
+ *       403:
+ *         description: Acceso no autorizado (x-api-key inválida)
+ */
 router.post('/interno/por-email', internalAuth, AuthController.getCredentialByEmail);
 
 export default router;

@@ -54,3 +54,10 @@ export interface UserDeletedPayload {
   userId: string;
   timestamp: Date;
 }
+
+export interface UserPasswordChangedPayload {
+  event: 'user.password.changed';
+  userId: string;
+  passwordHash: string;
+  timestamp: Date;
+}

@@ -4,15 +4,12 @@ import { AppDataSource } from '../config/db';
 import { Credential } from '../models/Credential';
 import { RefreshToken } from '../models/RefreshToken';
 import { RevokedToken } from '../models/RevokedToken';
-import { PasswordResetOtp } from '../models/PasswordResetOtp';
-import { sendOtpEmail } from '../utils/mailer';
 import { getUserCache } from './user-cache.service';
 import { CredentialFactory } from '../factories/CredentialFactory';
 
 const credentialRepo = () => AppDataSource.getRepository(Credential);
 const refreshTokenRepo = () => AppDataSource.getRepository(RefreshToken);
 const revokedTokenRepo = () => AppDataSource.getRepository(RevokedToken);
-const otpRepo = () => AppDataSource.getRepository(PasswordResetOtp);
 
 const ACCESS_TOKEN_TTL = 15 * 60; // 15 minutos en segundos
 
@@ -106,7 +103,7 @@ export const logout = async (refreshToken: string, accessToken: string) => {
   }
 };
 
-// RF-05 — Registro (el rol lo determina MS-02, por defecto ciudadano)
+// RF-05 — Registro legacy (flujo normal usa evento `user.registered` del broker)
 export const register = async (email: string, password: string, role: string = 'ciudadano') => {
   email = email.toLowerCase();
   const exists = await credentialRepo().findOne({ where: { email } });
@@ -118,43 +115,7 @@ export const register = async (email: string, password: string, role: string = '
   return { id: credential.id, email: credential.email, role: credential.role };
 };
 
-// Paso 1 — Solicitar OTP de recuperación
-export const forgotPassword = async (email: string) => {
-  email = email.toLowerCase();
-  const credential = await credentialRepo().findOne({ where: { email } });
-
-  if (credential) {
-    await otpRepo().delete({ email });
-
-    const otpData = CredentialFactory.crearOtp(email);
-    await otpRepo().save(otpData);
-    await sendOtpEmail(email, otpData.code);
-  }
-
-  return { message: 'Si el correo está registrado, recibirás un código de verificación' };
-};
-
-// Paso 2 — Verificar OTP y cambiar contraseña
-export const resetPassword = async (email: string, code: string, newPassword: string) => {
-  email = email.toLowerCase();
-
-  const otp = await otpRepo().findOne({ where: { email, code, used: false } });
-
-  if (!otp) throw Object.assign(new Error('Código inválido'), { status: 400 });
-  if (otp.expires_at <= new Date()) {
-    await otpRepo().delete({ id: otp.id });
-    throw Object.assign(new Error('Código expirado'), { status: 400 });
-  }
-
-  await otpRepo().delete({ id: otp.id });
-
-  const password_hash = await bcrypt.hash(newPassword, 10);
-  await credentialRepo().update({ email }, { password_hash });
-
-  return { message: 'Contraseña actualizada correctamente' };
-};
-
-// Interno — Actualización de rol llamada por MS-02
+// Interno — Actualización de rol legacy (flujo normal usa evento `user.updated` del broker)
 export const updateRole = async (credentialId: string, role: string) => {
   const credential = await credentialRepo().findOne({ where: { id: credentialId } });
   if (!credential) throw new Error('Credencial no encontrada');
@@ -162,7 +123,7 @@ export const updateRole = async (credentialId: string, role: string) => {
   await credentialRepo().update({ id: credentialId }, { role });
 };
 
-// Interno — Desactivar credencial llamada por MS-02
+// Interno — Desactivar credencial legacy (flujo normal usa evento `user.deleted` del broker)
 export const deactivateCredential = async (credentialId: string) => {
   const credential = await credentialRepo().findOne({ where: { id: credentialId } });
   if (!credential) throw new Error('Credencial no encontrada');
@@ -193,20 +154,6 @@ export const getMe = async (credentialId: string) => {
     status: credential.status,
     tipo: credential.cached_data?.tipo ?? 'ciudadano',
   };
-};
-
-// RF — Cambiar contraseña (usuario autenticado)
-export const changePassword = async (credentialId: string, currentPassword: string, newPassword: string) => {
-  const credential = await credentialRepo().findOne({ where: { id: credentialId, is_active: true } });
-  if (!credential) throw new Error('Credencial no encontrada');
-
-  const valid = await bcrypt.compare(currentPassword, credential.password_hash);
-  if (!valid) throw Object.assign(new Error('La contraseña actual es incorrecta'), { status: 400 });
-
-  const password_hash = await bcrypt.hash(newPassword, 10);
-  await credentialRepo().update({ id: credentialId }, { password_hash });
-
-  return { message: 'Contraseña actualizada correctamente' };
 };
 
 // Interno — Buscar credential_id por email (usado por ms-soporte para vincular tickets)

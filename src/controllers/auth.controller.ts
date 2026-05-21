@@ -48,7 +48,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 
 const ROLES_VALIDOS = ['ciudadano', 'veterinaria', 'municipalidad', 'moderador', 'administrador', 'superadmin'];
 
-// RF-05 — Llamado por MS-02, quien determina y envía el rol en el body
+// RF-05 — Endpoint legacy: el flujo normal crea credenciales vía evento `user.registered` del broker
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, role } = req.body;
@@ -63,32 +63,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// Paso 1 — Solicitar OTP
-export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email } = req.body;
-    if (!email) { errorResponse(res, 'Email requerido'); return; }
-    const data = await AuthService.forgotPassword(email);
-    successResponse(res, data);
-  } catch (err: any) {
-    errorResponse(res, err.message, err.status ?? 400);
-  }
-};
-
-// Paso 2 — Verificar OTP y cambiar contraseña
-export const resetPassword = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, code, newPassword } = req.body;
-    if (!email || !code || !newPassword) { errorResponse(res, 'Email, código y nueva contraseña requeridos'); return; }
-    if (newPassword.length < 6) { errorResponse(res, 'La contraseña debe tener al menos 6 caracteres'); return; }
-    const data = await AuthService.resetPassword(email, code, newPassword);
-    successResponse(res, data);
-  } catch (err: any) {
-    errorResponse(res, err.message, err.status ?? 400);
-  }
-};
-
-// Interno — Solo llamado por MS-02
+// Interno — Endpoint legacy de emergencia
 export const updateRole = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
@@ -112,19 +87,6 @@ export const deactivateCredential = async (req: Request, res: Response): Promise
     successResponse(res, { message: 'Credencial desactivada correctamente' });
   } catch (err: any) {
     errorResponse(res, err.message, 404);
-  }
-};
-
-// RF — Cambiar contraseña
-export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) { errorResponse(res, 'Contraseña actual y nueva contraseña requeridas'); return; }
-    if (newPassword.length < 6) { errorResponse(res, 'La nueva contraseña debe tener al menos 6 caracteres'); return; }
-    const data = await AuthService.changePassword(req.user!.id, currentPassword, newPassword);
-    successResponse(res, data);
-  } catch (err: any) {
-    errorResponse(res, err.message, err.status ?? 400);
   }
 };
 

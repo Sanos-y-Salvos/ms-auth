@@ -2,7 +2,6 @@ import { DataSource } from 'typeorm';
 import { Credential } from '../models/Credential';
 import { RefreshToken } from '../models/RefreshToken';
 import { RevokedToken } from '../models/RevokedToken';
-import { PasswordResetOtp } from '../models/PasswordResetOtp';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -15,5 +14,5 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME,
   synchronize: true,
   logging: false,
-  entities: [Credential, RefreshToken, RevokedToken, PasswordResetOtp],
+  entities: [Credential, RefreshToken, RevokedToken],
 });
