@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { AppDataSource } from '../config/db';
 import { Credential } from '../models/Credential';
 import { RefreshToken } from '../models/RefreshToken';
-import { PasswordResetOtp } from '../models/PasswordResetOtp';
 
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 días en segundos
 
@@ -19,15 +18,6 @@ export class CredentialFactory {
       token: uuidv4(),
       credential_id: credentialId,
       expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL * 1000),
-    };
-  }
-
-  static crearOtp(email: string): Pick<PasswordResetOtp, 'email' | 'code' | 'expires_at' | 'used'> {
-    return {
-      email: email.toLowerCase(),
-      code: Math.floor(100000 + Math.random() * 900000).toString(),
-      expires_at: new Date(Date.now() + 10 * 60 * 1000),
-      used: false,
     };
   }
 }

@@ -5,8 +5,8 @@ const options: swaggerJsdoc.Options = {
     openapi: '3.0.0',
     info: {
       title: 'MS-Auth — Sanos y Salvos',
-      version: '1.0.0',
-      description: 'Microservicio de autenticación: login, registro, refresh token y logout',
+      version: '2.0.0',
+      description: 'Microservicio de autenticación: login, refresh, logout y perfil cacheado. Mantiene una réplica de credenciales sincronizada desde ms-users vía broker.',
     },
     servers: [
       {

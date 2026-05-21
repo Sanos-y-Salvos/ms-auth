@@ -1,7 +1,7 @@
 import { AppDataSource } from '../config/db';
 import { Credential } from '../models/Credential';
 import { redisClient } from '../config/redis';
-import type { UserRegisteredPayload, UserUpdatedPayload } from './types';
+import type { UserRegisteredPayload, UserUpdatedPayload, UserPasswordChangedPayload } from './types';
 
 const credRepo = () => AppDataSource.getRepository(Credential);
 
@@ -154,6 +154,17 @@ export const syncUserUpdated = async (data: UserUpdatedPayload): Promise<void> =
   }
 
   console.log(`[user-cache] Credencial actualizada para userId=${data.userId}`);
+};
+
+export const syncUserPasswordChanged = async (data: UserPasswordChangedPayload): Promise<void> => {
+  const cred = await credRepo().findOne({ where: { id: data.userId } });
+  if (!cred) {
+    console.warn(`[user-cache] Credencial ${data.userId} no encontrada para actualizar contraseña`);
+    return;
+  }
+
+  await credRepo().update({ id: data.userId }, { password_hash: data.passwordHash });
+  console.log(`[user-cache] Password actualizado para userId=${data.userId}`);
 };
 
 export const syncUserDeleted = async (userId: string): Promise<void> => {

@@ -1,7 +1,17 @@
 import Bull from 'bull';
 import { userEventsQueue } from '../config/redis';
-import { syncUserRegistered, syncUserUpdated, syncUserDeleted } from '../services/user-cache.service';
-import type { UserRegisteredPayload, UserUpdatedPayload, UserDeletedPayload } from '../services/types';
+import {
+  syncUserRegistered,
+  syncUserUpdated,
+  syncUserDeleted,
+  syncUserPasswordChanged,
+} from '../services/user-cache.service';
+import type {
+  UserRegisteredPayload,
+  UserUpdatedPayload,
+  UserDeletedPayload,
+  UserPasswordChangedPayload,
+} from '../services/types';
 
 export const startEventConsumers = (): void => {
   userEventsQueue.process('user.registered', async (job: Bull.Job<UserRegisteredPayload>) => {
@@ -17,6 +27,11 @@ export const startEventConsumers = (): void => {
   userEventsQueue.process('user.deleted', async (job: Bull.Job<UserDeletedPayload>) => {
     console.log(`[consumer] user.deleted recibido → userId=${job.data.userId}`);
     await syncUserDeleted(job.data.userId);
+  });
+
+  userEventsQueue.process('user.password.changed', async (job: Bull.Job<UserPasswordChangedPayload>) => {
+    console.log(`[consumer] user.password.changed recibido → userId=${job.data.userId}`);
+    await syncUserPasswordChanged(job.data);
   });
 
   userEventsQueue.on('failed', (job: Bull.Job, err: Error) => {

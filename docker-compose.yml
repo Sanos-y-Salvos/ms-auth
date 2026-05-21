@@ -62,9 +62,6 @@ services:
       JWT_SECRET: 6dcc110adf4dcde1015a418452ec8ca39780835ef83d28b13b165799a0525f264594d585080db90d09b8b9d4661507e40d67d5d2ae7673fb0b92719a18233213
       # Comunicación interna
       INTERNAL_API_KEY: fe7db533c3030b5da6e544f4c631f92cbcdf0f0d452962e3cbfe08ca5a8c116e
-      # Gmail (OTP / reset de contraseña)
-      GMAIL_USER: felandresr@gmail.com
-      GMAIL_APP_PASSWORD: polabayuyxzzbyyc
     ports:
       - "3001:3001"
     depends_on:
