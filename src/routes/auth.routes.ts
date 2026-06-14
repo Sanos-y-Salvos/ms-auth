@@ -1,5 +1,10 @@
+// Router principal del microservicio de autenticación
 import { Router } from 'express';
+
+// Controladores: implementan la lógica de cada endpoint
 import * as AuthController from '../controllers/auth.controller';
+
+// Middlewares de seguridad: x-api-key para internos, JWT para usuarios
 import { internalAuth } from '../middlewares/internalAuth';
 import { verifyToken } from '../middlewares/verifyToken';
 
@@ -43,6 +48,7 @@ const router = Router();
  *       400:
  *         description: El correo ya está registrado
  */
+// Registro manual (legacy) — protegido con API key interna
 router.post('/register', internalAuth, AuthController.register);
 
 /**
@@ -71,6 +77,7 @@ router.post('/register', internalAuth, AuthController.register);
  *       401:
  *         description: Credenciales inválidas
  */
+// Login público (RF-01)
 router.post('/login', AuthController.login);
 
 /**
@@ -96,6 +103,7 @@ router.post('/login', AuthController.login);
  *       401:
  *         description: Refresh token inválido o expirado
  */
+// Renovación de sesión (RF-02) — rota el refresh token
 router.post('/refresh', AuthController.refresh);
 
 /**
@@ -123,6 +131,7 @@ router.post('/refresh', AuthController.refresh);
  *       400:
  *         description: Refresh token y Access token requeridos
  */
+// Logout (RF-04) — revoca el access token y elimina el refresh
 router.post('/logout', AuthController.logout);
 
 /**
@@ -142,6 +151,7 @@ router.post('/logout', AuthController.logout);
  *       404:
  *         description: Usuario no encontrado
  */
+// Perfil del usuario autenticado — protegido por JWT
 router.get('/me', verifyToken, AuthController.getMe);
 
 /**
@@ -182,6 +192,7 @@ router.get('/me', verifyToken, AuthController.getMe);
  *       404:
  *         description: Credencial no encontrada
  */
+// Actualización manual de rol (legacy) — protegido con API key interna
 router.patch('/credentials/:id/role', internalAuth, AuthController.updateRole);
 
 /**
@@ -208,6 +219,7 @@ router.patch('/credentials/:id/role', internalAuth, AuthController.updateRole);
  *       404:
  *         description: Credencial no encontrada
  */
+// Desactivación manual (legacy) — protegido con API key interna
 router.patch('/credentials/:id/deactivate', internalAuth, AuthController.deactivateCredential);
 
 /**
@@ -232,6 +244,7 @@ router.patch('/credentials/:id/deactivate', internalAuth, AuthController.deactiv
  *       200:
  *         description: Credencial eliminada correctamente
  */
+// Eliminación física (rollback) — protegido con API key interna
 router.delete('/credentials/:id', internalAuth, AuthController.deleteCredential);
 
 /**
@@ -267,6 +280,7 @@ router.delete('/credentials/:id', internalAuth, AuthController.deleteCredential)
  *       403:
  *         description: Acceso no autorizado (x-api-key inválida)
  */
+// Lookup interno por email (lo usa ms-soporte para vincular tickets)
 router.post('/interno/por-email', internalAuth, AuthController.getCredentialByEmail);
 
 export default router;
