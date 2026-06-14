@@ -1,5 +1,6 @@
 /** @type {import('jest').Config} */
 module.exports = {
+  displayName: 'ms-auth',
   testEnvironment: 'node',
   rootDir: '.',
   testMatch: ['<rootDir>/test/**/*.spec.ts'],
