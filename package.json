@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage && node scripts/patch-coverage-title.js"
   },
   "keywords": [],
   "author": "",
