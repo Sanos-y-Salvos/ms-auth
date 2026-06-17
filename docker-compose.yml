@@ -54,8 +54,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: ms_auth
-      # Bull — broker Redis externo
-      REDIS_BROKER_URL: redis://broker-redis:6379
+      # RabbitMQ — message broker externo
+      RABBITMQ_URL: amqp://admin:admin@broker-rabbitmq:5672
       # Caché KV — Redis propio de ms-auth
       REDIS_CACHE_URL: redis://ms-auth-redis:6379
       # JWT

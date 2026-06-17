@@ -1,4 +1,4 @@
-// Tipos de eventos que ms-users emite hacia ms-auth vía Bull/Redis.
+// Tipos de eventos que ms-users emite hacia ms-auth vía RabbitMQ.
 // Deben mantenerse sincronizados con ms-users/src/events/event-emitter.service.ts
 
 // Evento disparado al crearse un nuevo usuario en ms-users
@@ -11,6 +11,7 @@ export interface UserRegisteredPayload {
   permissions: string[];
   name: string;
   avatarUrl?: string;
+  foto_perfil?: string;
   // Discriminador del tipo de cuenta: persona natural vs. institución
   tipo: 'ciudadano' | 'institucion';
   telefono: string;
