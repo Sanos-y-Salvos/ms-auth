@@ -1,7 +1,6 @@
 services:
 
   # ── Base de datos exclusiva de ms-auth ───────────────────────────────────────
-
   db-ms-auth:
     container_name: ms-auth-db
     image: postgres:16-alpine
@@ -20,24 +19,7 @@ services:
       - ms_auth_net
     restart: unless-stopped
 
-  # ── Redis propio de ms-auth (caché KV de perfiles) ───────────────────────────
-
-  ms-auth-redis:
-    container_name: ms-auth-redis
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    networks:
-      - ms_auth_net
-    restart: unless-stopped
-
   # ── ms-auth ──────────────────────────────────────────────────────────────────
-
   ms-auth:
     container_name: ms-auth
     image: felruiz/ms-auth:latest
@@ -48,41 +30,41 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      # PostgreSQL
+      # PostgreSQL (Apunta a la base de datos local en la red privada)
       DB_HOST: db-ms-auth
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: ms_auth
-      # RabbitMQ — message broker externo
-      RABBITMQ_URL: amqp://admin:admin@broker-rabbitmq:5672
-      # Caché KV — Redis propio de ms-auth
-      REDIS_CACHE_URL: redis://ms-auth-redis:6379
+      
+      # RabbitMQ Central (Apunta al contenedor 'rabbitmq' de tu red pública)
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672 
+      
+      # Caché KV Central (Apunta al contenedor 'redis-cache' de tu red pública)
+      REDIS_CACHE_URL: redis://redis-cache:6379 
+      
       # JWT
       JWT_SECRET: 6dcc110adf4dcde1015a418452ec8ca39780835ef83d28b13b165799a0525f264594d585080db90d09b8b9d4661507e40d67d5d2ae7673fb0b92719a18233213
-      # Comunicación interna
       INTERNAL_API_KEY: fe7db533c3030b5da6e544f4c631f92cbcdf0f0d452962e3cbfe08ca5a8c116e
     ports:
       - "3001:3001"
     depends_on:
       db-ms-auth:
         condition: service_healthy
-      ms-auth-redis:
-        condition: service_healthy
     networks:
-      - ms_auth_net
-      - broker_net
+      - ms_auth_net        # Red privada
+      - sanos-y-salvos-net # Red pública compartida (donde viven redis-cache y rabbitmq)
     restart: unless-stopped
 
 # ── Volúmenes y red ──────────────────────────────────────────────────────────
-
 volumes:
   db_data:
-  redis_data:
 
 networks:
   ms_auth_net:
     driver: bridge
-  broker_net:
+    name: ms_auth_net
+  # Ahora solo necesitas invocar la red central, RabbitMQ y Redis están ahí.
+  sanos-y-salvos-net:
     external: true
-    name: broker_net
+    name: mascotas_sanos-y-salvos-net
