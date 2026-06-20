@@ -99,11 +99,21 @@ export const deactivateCredential = async (req: Request, res: Response): Promise
   try {
     const id = req.params.id as string;
     await AuthService.deactivateCredential(id);
-    // Auditoría de la desactivación
     console.log(`[AUDIT] ${new Date().toISOString()} — credencial desactivada id=${id}`);
     successResponse(res, { message: 'Credencial desactivada correctamente' });
   } catch (err: any) {
-    // 404 si la credencial no existe
+    errorResponse(res, err.message, 404);
+  }
+};
+
+// Interno — Activación manual de credencial (complemento de deactivateCredential)
+export const activateCredential = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    await AuthService.activateCredential(id);
+    console.log(`[AUDIT] ${new Date().toISOString()} — credencial activada id=${id}`);
+    successResponse(res, { message: 'Credencial activada correctamente' });
+  } catch (err: any) {
     errorResponse(res, err.message, 404);
   }
 };
