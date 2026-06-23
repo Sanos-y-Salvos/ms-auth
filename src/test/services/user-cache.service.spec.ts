@@ -5,7 +5,7 @@ const credRepo = {
   save: jest.fn(),
   update: jest.fn(),
 };
-jest.mock('../../src/config/db', () => ({
+jest.mock('../../config/db', () => ({
   AppDataSource: { getRepository: jest.fn(() => credRepo) },
 }));
 
@@ -14,7 +14,7 @@ const redisClient = {
   set: jest.fn(),
   get: jest.fn(),
 };
-jest.mock('../../src/config/redis', () => ({
+jest.mock('../../config/redis', () => ({
   redisClient,
 }));
 
@@ -24,7 +24,7 @@ import {
   syncUserDeleted,
   syncUserPasswordChanged,
   getUserCache,
-} from '../../src/services/user-cache.service';
+} from '../../services/user-cache.service';
 
 const basePayload = {
   event: 'user.registered' as const,
@@ -177,6 +177,60 @@ describe('services/user-cache.service', () => {
 
       const updateArg = credRepo.update.mock.calls[0][1];
       expect(updateArg).toEqual({ role: 'admin' });
+    });
+
+    it('preserva campos del caché existente y usa fallback cuando cached_data es null', async () => {
+      const credWithoutCache = { ...existingCred, cached_data: null };
+      credRepo.findOne
+        .mockResolvedValueOnce(credWithoutCache)
+        .mockResolvedValueOnce({ ...credWithoutCache, email: 'new@b.cl' });
+      credRepo.update.mockResolvedValue(undefined);
+      redisClient.get.mockResolvedValue(JSON.stringify({
+        tipo: 'ciudadano',
+        telefono: '999',
+        region: 'RM',
+        comuna: 'Santiago',
+        primer_nombre: 'Ana',
+        segundo_nombre: 'B',
+        apellido_paterno: 'Pérez',
+        apellido_materno: 'López',
+        run: '11.111.111-1',
+        direccion: 'Calle 1',
+        razon_social: 'Empresa',
+        rut: '12.345.678-9',
+        tipo_institucion: 'hospital',
+      }));
+      redisClient.set.mockResolvedValue('OK');
+
+      await syncUserUpdated({
+        event: 'user.updated',
+        userId: 'u1',
+        email: 'new@b.cl',
+        // sin role, name, avatarUrl, telefono, region ni demás campos
+        timestamp: new Date(),
+      });
+
+      const saved = JSON.parse(redisClient.set.mock.calls[0][1]);
+      expect(saved.name).toBe('');        // fallback por cached_data null
+      expect(saved.telefono).toBe('999'); // preservado del caché existente
+      expect(saved.run).toBe('11.111.111-1');
+    });
+
+    it('omite setUserCache cuando updated es null después de la actualización', async () => {
+      credRepo.findOne
+        .mockResolvedValueOnce(existingCred)
+        .mockResolvedValueOnce(null);
+      credRepo.update.mockResolvedValue(undefined);
+      redisClient.get.mockResolvedValue(null);
+
+      await syncUserUpdated({
+        event: 'user.updated',
+        userId: 'u1',
+        role: 'admin',
+        timestamp: new Date(),
+      });
+
+      expect(redisClient.set).not.toHaveBeenCalled();
     });
   });
 

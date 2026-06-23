@@ -8,14 +8,14 @@ const revokedRepo = {
   findOne: jest.fn(),
   delete: jest.fn(),
 };
-jest.mock('../../src/config/db', () => ({
+jest.mock('../../config/db', () => ({
   AppDataSource: {
     getRepository: jest.fn(() => revokedRepo),
   },
 }));
 
 import jwt from 'jsonwebtoken';
-import { verifyToken } from '../../src/middlewares/verifyToken';
+import { verifyToken } from '../../middlewares/verifyToken';
 
 const buildRes = () => {
   const res: any = {};

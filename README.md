@@ -4,18 +4,6 @@ Microservicio de **autenticación** de la plataforma **Sanos y Salvos**. Su úni
 
 ---
 
-## Responsabilidades
-
-| Sí hace | No hace |
-|---|---|
-| Login y emisión de tokens | Registrar usuarios (lo hace ms-users) |
-| Refresh de Access Token | Cambiar contraseña (lo hace ms-users) |
-| Logout y revocación | Recuperar contraseña por OTP (lo hace ms-users) |
-| Servir perfil cacheado (`/me`) | Editar datos de perfil (lo hace ms-users) |
-| Mantener réplica de credenciales | Ser fuente de verdad de datos de usuario |
-
----
-
 ## Tecnologías
 
 | Herramienta | Uso |
@@ -36,110 +24,55 @@ Microservicio de **autenticación** de la plataforma **Sanos y Salvos**. Su úni
 
 ## Arquitectura
 
-### Patrón de arquitectura
+### Patrón arquitectónico
 
-**Arquitectura en capas + Event-Driven (consumidor)**
+- **MVC (Model-View-Controller)**: Adaptado para APIs REST (Model-Route-Controller-Service). Los *Controllers* gestionan las solicitudes y respuestas HTTP, las *Routes* definen los endpoints, y la lógica de negocio se centraliza en los *Services*. Los *Models* representan las entidades de la base de datos.
 
-```
-src/routes/ → src/controllers/ → src/services/ → src/models/
-                                        ↑
-                                src/queue/consumers (eventos del broker)
-```
+### Patrón de diseño
 
-- **Capas**: cada capa solo conoce la inmediatamente inferior. Las rutas reciben HTTP, los controllers validan, los services aplican lógica de negocio, los models persisten.
-- **Event-Driven**: `ms-auth` consume eventos publicados por `ms-users` (`user.registered`, `user.updated`, `user.deleted`, `user.password.changed`) sin necesidad de llamar HTTP directo, lo que lo hace independiente del ciclo de vida de `ms-users`.
-
-### Patrones de diseño
-
-| Patrón | Ubicación | Propósito |
-|---|---|---|
-| **Repository** (via TypeORM) | `AppDataSource.getRepository(Entidad)` | Encapsular acceso a BD, desacoplar del motor SQL |
-| **Factory Method** | `src/factories/CredentialFactory.ts` | Centralizar construcción de credenciales y refresh tokens |
-| **Singleton** | `src/config/db.ts`, `src/config/redis.ts` | Una sola conexión a PG, una sola cola Bull, un solo cliente Redis KV |
-
-### Comunicación con otros microservicios
-
-```
-ms-users  ──▶ user.registered        ──▶ ms-auth crea Credential réplica
-ms-users  ──▶ user.updated           ──▶ ms-auth actualiza cached_data
-ms-users  ──▶ user.deleted           ──▶ ms-auth marca como inactiva
-ms-users  ──▶ user.password.changed  ──▶ ms-auth actualiza password_hash
-```
-
-`ms-auth` **nunca** llama HTTP a `ms-users`. Toda la sincronización es asíncrona vía broker.
+- **Repository Pattern**: Utilizado a través de TypeORM para abstraer la capa de acceso a datos. Los servicios se comunican con los repositorios para realizar operaciones sobre la base de datos (CRUD) sin acoplarse directamente a sentencias SQL.
 
 ---
 
-## Requisitos previos
+## Estructura del proyecto
 
-- Node.js 20+
-- PostgreSQL 16+
-- Redis (broker)
-
----
-
-## Variables de entorno
-
-Archivo `.env` en la raíz:
-
-```env
-PORT=3001
-
-# PostgreSQL
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=ms_auth
-
-# Redis broker (cola compartida con ms-users)
-REDIS_BROKER_URL=redis://localhost:6379
-
-# Redis cache propio (perfiles cacheados para /me)
-REDIS_CACHE_URL=redis://localhost:6379
-
-# JWT — debe coincidir con ms-users
-JWT_SECRET=tu_secreto_minimo_64_caracteres
-
-# API key interna — debe coincidir con ms-users
-INTERNAL_API_KEY=clave_compartida_con_ms_users
-
-NODE_ENV=development
 ```
-
-> `JWT_SECRET` e `INTERNAL_API_KEY` deben ser **idénticos** a los de `ms-users`.
-
----
-
-## Instalación y ejecución
-
-```bash
-git clone <url-del-repositorio>
-cd ms-auth
-npm install
-
-# Desarrollo (hot reload)
-npm run dev
-
-# Producción
-npm run build && npm start
+ms-auth/
+├── src/
+│   ├── config/
+│   │   ├── db.ts                   # Conexión PostgreSQL + TypeORM (Singleton)
+│   │   ├── redis.ts                # Cola Bull + cliente Redis KV (Singleton)
+│   │   └── swagger.ts              # Configuración OpenAPI 3.0
+│   ├── controllers/
+│   │   └── auth.controller.ts      # Handlers HTTP
+│   ├── factories/
+│   │   └── CredentialFactory.ts    # Factory para crear credenciales y refresh tokens
+│   ├── middlewares/
+│   │   ├── errorHandler.ts
+│   │   ├── internalAuth.ts         # Verificación x-api-key para endpoints internos
+│   │   ├── notFound.ts
+│   │   └── verifyToken.ts          # Verificación JWT
+│   ├── models/
+│   │   ├── Credential.ts
+│   │   ├── RefreshToken.ts
+│   │   └── RevokedToken.ts
+│   ├── queue/
+│   │   └── consumers.ts            # Consumers de eventos desde ms-users
+│   ├── routes/
+│   │   └── auth.routes.ts
+│   ├── services/
+│   │   ├── auth.service.ts         # Lógica de autenticación
+│   │   ├── types.ts                # Tipado de payloads de eventos
+│   │   └── user-cache.service.ts   # Sincronización desde eventos del broker
+│   ├── utils/
+│   │   └── response.ts             # Helpers de respuesta HTTP estandarizada
+│   ├── app.ts
+│   └── server.ts                   # Entry point — crea BD si no existe, levanta consumers
+├── Dockerfile
+├── docker-compose.yml
+├── package.json
+└── tsconfig.json
 ```
-
-La base de datos se crea automáticamente al iniciar si no existe (`ensureDatabase()` en `server.ts`).
-
-### Con Docker
-
-```bash
-cd ms-auth
-docker compose up -d
-```
-
-Levanta:
-- PostgreSQL propio (`ms-auth-db`)
-- Redis KV propio (`ms-auth-redis`)
-- Servicio `ms-auth`
-
-> Requiere que el `broker` esté corriendo previamente.
 
 ---
 
@@ -268,113 +201,6 @@ Content-Type: application/json
 
 ---
 
-## Modelo de datos
-
-### Tabla `credentials`
-
-Réplica local de las credenciales. La fuente de verdad es `ms-users.users`; este servicio mantiene una copia sincronizada vía eventos para poder autenticar sin depender de ms-users.
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `id` | UUID (PK) | Mismo UUID que `users.credential_id` en ms-users |
-| `email` | string único | Correo del usuario |
-| `password_hash` | string | Hash bcrypt sincronizado desde ms-users |
-| `role` | string | Rol replicado |
-| `permissions` | string[] | Permisos replicados |
-| `cached_data` | jsonb | Snapshot del perfil (nombre, avatar, tipo) |
-| `status` | string | `active` / `inactive` |
-| `is_active` | boolean | Estado de la cuenta |
-| `created_at` | timestamp | — |
-| `updated_at` | timestamp | — |
-
-### Tabla `refresh_tokens`
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `token` | UUID (PK) | Refresh token |
-| `credential_id` | UUID | FK lógica a `credentials.id` |
-| `expires_at` | timestamptz | TTL 7 días |
-| `created_at` | timestamp | — |
-
-### Tabla `revoked_tokens`
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `token` | text (PK) | Access Token revocado |
-| `expires_at` | timestamptz | Expiración original del JWT |
-| `created_at` | timestamp | Fecha de revocación |
-
----
-
-## Estructura del proyecto
-
-```
-ms-auth/
-├── src/
-│   ├── config/
-│   │   ├── db.ts                   # Conexión PostgreSQL + TypeORM (Singleton)
-│   │   ├── redis.ts                # Cola Bull + cliente Redis KV (Singleton)
-│   │   └── swagger.ts              # Configuración OpenAPI 3.0
-│   ├── controllers/
-│   │   └── auth.controller.ts      # Handlers HTTP
-│   ├── factories/
-│   │   └── CredentialFactory.ts    # Factory para crear credenciales y refresh tokens
-│   ├── middlewares/
-│   │   ├── errorHandler.ts
-│   │   ├── internalAuth.ts         # Verificación x-api-key para endpoints internos
-│   │   ├── notFound.ts
-│   │   └── verifyToken.ts          # Verificación JWT
-│   ├── models/
-│   │   ├── Credential.ts
-│   │   ├── RefreshToken.ts
-│   │   └── RevokedToken.ts
-│   ├── queue/
-│   │   └── consumers.ts            # Consumers de eventos desde ms-users
-│   ├── routes/
-│   │   └── auth.routes.ts
-│   ├── services/
-│   │   ├── auth.service.ts         # Lógica de autenticación
-│   │   ├── types.ts                # Tipado de payloads de eventos
-│   │   └── user-cache.service.ts   # Sincronización desde eventos del broker
-│   ├── utils/
-│   │   └── response.ts             # Helpers de respuesta HTTP estandarizada
-│   ├── app.ts
-│   └── server.ts                   # Entry point — crea BD si no existe, levanta consumers
-├── Dockerfile
-├── docker-compose.yml
-├── package.json
-└── tsconfig.json
-```
-
----
-
-## Scripts
-
-| Comando | Descripción |
-|---|---|
-| `npm run dev` | Hot reload con nodemon + ts-node |
-| `npm run build` | Compila TypeScript a `/dist` |
-| `npm start` | Ejecuta la versión compilada |
-| `docker compose up -d` | Levanta ms-auth + PG + Redis KV |
-| `docker compose down -v` | Detiene y limpia datos |
-
----
-
-## Flujo de un login completo
-
-```
-1. Cliente → POST /api/auth/login (email, password)
-2. ms-auth busca Credential.email en su réplica local (PG)
-3. ms-auth verifica password_hash con bcrypt
-4. ms-auth emite accessToken (15 min) y refreshToken (7 días)
-5. ms-auth consulta perfil cacheado en Redis (user:<id>)
-6. Cliente recibe tokens + perfil
-```
-
-Si Redis cache está vacío, ms-auth reconstruye el perfil desde el campo `cached_data` de PostgreSQL — sigue siendo operativo aunque ms-users esté caído.
-
----
-
 ## Crear el primer superadmin
 
 Como `ms-users` es la fuente de verdad del rol en v2.0.0, el procedimiento completo está documentado en **[ms-users/README.md → Crear el primer superadmin](../ms-users/README.md#crear-el-primer-superadmin-con-docker-corriendo)**.
@@ -386,13 +212,28 @@ Resumen del flujo:
 3. `UPDATE credentials SET role='superadmin'` en `ms-auth-db` (réplica)
 4. `FLUSHDB` en `ms-auth-redis` para invalidar caché
 
+
 ---
 
-## Diagnóstico
+## Pruebas Unitarias
 
-| Síntoma | Causa probable | Solución |
-|---|---|---|
-| `Credenciales inválidas` siempre | Réplica desincronizada | Verificar logs del consumer: `[consumer] user.registered recibido` |
-| `Token inválido o expirado` | Access token expiró (15 min) | Hacer refresh |
-| ms-auth no procesa eventos | Broker no levantado | Levantar `broker/` antes |
-| `password.changed` no se aplica | Consumer no registrado | Verificar `src/queue/consumers.ts` |
+El proyecto cuenta con una suite de pruebas unitarias para garantizar la calidad y el correcto funcionamiento de los servicios.
+
+**Ejecutar las pruebas:**
+```bash
+npm run test
+```
+
+**Generar reporte de cobertura:**
+```bash
+npm run test:coverage
+```
+
+Para visualizar el reporte de cobertura detallado, abre el archivo generado en tu navegador:
+```bash
+open coverage/index.html
+```
+
+**Reporte de cobertura:**
+
+![Reporte de pruebas unitarias](./assets/Screenshot_2026-06-22_22.01.01.png)

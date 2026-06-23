@@ -1,4 +1,4 @@
-import { notFound } from '../../src/middlewares/notFound';
+import { notFound } from '../../middlewares/notFound';
 
 const buildRes = () => {
   const res: any = {};
