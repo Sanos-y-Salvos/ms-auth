@@ -1,4 +1,4 @@
-import { successResponse, errorResponse } from '../../src/utils/response';
+import { successResponse, errorResponse } from '../../utils/response';
 
 // Mock mínimo del Response de Express con encadenamiento status().json()
 const buildRes = () => {

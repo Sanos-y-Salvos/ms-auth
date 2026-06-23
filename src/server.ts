@@ -27,16 +27,31 @@ async function ensureDatabase() {
   await client.end();
 }
 
+async function connectWithRetry(retries = 10, delayMs = 5000): Promise<void> {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      const channel = await connectRabbitMQ();
+      startEventConsumers(channel);
+      return;
+    } catch (err: any) {
+      console.error(`[rabbitmq] Intento ${i}/${retries} fallido: ${err.message}`);
+      if (i < retries) await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  console.error('[rabbitmq] No se pudo conectar después de varios intentos. El servidor sigue activo sin consumidores.');
+}
+
 ensureDatabase()
   .then(() => AppDataSource.initialize())
   .then(async () => {
     console.log('✅ Conexión a PostgreSQL establecida');
-    const channel = await connectRabbitMQ();
-    startEventConsumers(channel);
     app.listen(PORT, () => {
       console.log(`🚀 MS-Auth corriendo en http://localhost:${PORT}`);
     });
+    // RabbitMQ en background — no bloquea el arranque del servidor
+    connectWithRetry().catch((err) => console.error('[rabbitmq] Error inesperado:', err));
   })
   .catch((err) => {
     console.error('❌ Error al iniciar el servidor:', err);
+    process.exit(1);
   });

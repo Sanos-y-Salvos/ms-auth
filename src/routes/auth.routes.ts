@@ -222,6 +222,9 @@ router.patch('/credentials/:id/role', internalAuth, AuthController.updateRole);
 // Desactivación manual (legacy) — protegido con API key interna
 router.patch('/credentials/:id/deactivate', internalAuth, AuthController.deactivateCredential);
 
+// Activación manual — protegido con API key interna
+router.patch('/credentials/:id/activate', internalAuth, AuthController.activateCredential);
+
 /**
  * @swagger
  * /api/auth/credentials/{id}:

@@ -1,5 +1,5 @@
 // Mock completo del servicio para aislar el controlador
-jest.mock('../../src/services/auth.service', () => ({
+jest.mock('../../services/auth.service', () => ({
   login: jest.fn(),
   refreshSession: jest.fn(),
   logout: jest.fn(),
@@ -11,8 +11,8 @@ jest.mock('../../src/services/auth.service', () => ({
   getCredentialByEmail: jest.fn(),
 }));
 
-import * as AuthService from '../../src/services/auth.service';
-import * as Controller from '../../src/controllers/auth.controller';
+import * as AuthService from '../../services/auth.service';
+import * as Controller from '../../controllers/auth.controller';
 
 const buildRes = () => {
   const res: any = {};
@@ -146,6 +146,14 @@ describe('controllers/auth.controller', () => {
 
     it('responde 400 si la contraseña tiene <6 caracteres', async () => {
       const req: any = { body: { email: 'a@b.cl', password: '123', role: 'ciudadano' } };
+      const res = buildRes();
+      await Controller.register(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('responde 400 si el servicio lanza', async () => {
+      (AuthService.register as jest.Mock).mockRejectedValue(new Error('ya existe'));
+      const req: any = { body: { email: 'a@b.cl', password: '123456', role: 'ciudadano' } };
       const res = buildRes();
       await Controller.register(req, res);
       expect(res.status).toHaveBeenCalledWith(400);

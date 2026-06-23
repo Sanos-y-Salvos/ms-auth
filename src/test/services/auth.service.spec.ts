@@ -32,7 +32,7 @@ const revokedTokenRepo = {
   upsert: jest.fn(),
 };
 
-jest.mock('../../src/config/db', () => ({
+jest.mock('../../config/db', () => ({
   AppDataSource: {
     getRepository: jest.fn((entity: any) => {
       // Discrimina por nombre de la entidad para devolver el mock correcto
@@ -46,14 +46,14 @@ jest.mock('../../src/config/db', () => ({
 }));
 
 // Caché de usuario mockeado
-jest.mock('../../src/services/user-cache.service', () => ({
+jest.mock('../../services/user-cache.service', () => ({
   getUserCache: jest.fn(),
 }));
 
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import * as AuthService from '../../src/services/auth.service';
-import { getUserCache } from '../../src/services/user-cache.service';
+import * as AuthService from '../../services/auth.service';
+import { getUserCache } from '../../services/user-cache.service';
 
 const resetAllRepos = () => {
   Object.values(credentialRepo).forEach((fn: any) => fn.mockReset());
@@ -93,6 +93,23 @@ describe('services/auth.service', () => {
       expect(out.refreshToken).toBe('uuid-fijo');
       expect(out.user).toEqual({ id: 'c1', email: 'a@b.cl', name: 'Ana' });
       expect(refreshTokenRepo.save).toHaveBeenCalled();
+    });
+
+    it('no borra ningún token si find devuelve array vacío con 5 sesiones', async () => {
+      credentialRepo.findOne.mockResolvedValue({
+        id: 'c1', email: 'a@b.cl', password_hash: 'h', role: 'ciudadano',
+        permissions: [], cached_data: null, status: 'active',
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (jwt.sign as jest.Mock).mockReturnValue('jwt');
+      refreshTokenRepo.count.mockResolvedValue(5);
+      refreshTokenRepo.find.mockResolvedValue([]);
+      refreshTokenRepo.save.mockResolvedValue(undefined);
+      (getUserCache as jest.Mock).mockResolvedValue(null);
+
+      await AuthService.login('a@b.cl', '123456');
+
+      expect(refreshTokenRepo.delete).not.toHaveBeenCalled();
     });
 
     it('expulsa el refresh token más antiguo cuando hay 5 sesiones activas', async () => {

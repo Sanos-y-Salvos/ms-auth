@@ -1,4 +1,4 @@
-import { internalAuth } from '../../src/middlewares/internalAuth';
+import { internalAuth } from '../../middlewares/internalAuth';
 
 const buildRes = () => {
   const res: any = {};

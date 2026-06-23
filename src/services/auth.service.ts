@@ -169,8 +169,15 @@ export const deactivateCredential = async (credentialId: string) => {
   const credential = await credentialRepo().findOne({ where: { id: credentialId } });
   if (!credential) throw new Error('Credencial no encontrada');
 
-  // Soft-delete: solo bajamos el flag, no eliminamos físicamente
-  await credentialRepo().update({ id: credentialId }, { is_active: false });
+  await credentialRepo().update({ id: credentialId }, { is_active: false, status: 'inactive' });
+};
+
+// Interno — Activar credencial (complemento de deactivateCredential)
+export const activateCredential = async (credentialId: string) => {
+  const credential = await credentialRepo().findOne({ where: { id: credentialId } });
+  if (!credential) throw new Error('Credencial no encontrada');
+
+  await credentialRepo().update({ id: credentialId }, { is_active: true, status: 'active' });
 };
 
 // Interno — Eliminar credencial (rollback de registro fallido)

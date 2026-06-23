@@ -1,4 +1,4 @@
-import { errorHandler } from '../../src/middlewares/errorHandler';
+import { errorHandler } from '../../middlewares/errorHandler';
 
 const buildRes = () => {
   const res: any = {};
