@@ -4,6 +4,7 @@ import app from './app';
 import { AppDataSource } from './config/db';
 import { connectRabbitMQ } from './config/rabbitmq';
 import { startEventConsumers } from './queue/consumers';
+import { seedAdminCredential } from './seed/adminSeed';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -45,6 +46,8 @@ ensureDatabase()
   .then(() => AppDataSource.initialize())
   .then(async () => {
     console.log('✅ Conexión a PostgreSQL establecida');
+    // Seed idempotente: crea la credencial del admin fijo si aún no existe
+    await seedAdminCredential();
     app.listen(PORT, () => {
       console.log(`🚀 MS-Auth corriendo en http://localhost:${PORT}`);
     });
