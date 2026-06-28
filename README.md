@@ -13,8 +13,8 @@ Microservicio de **autenticación** de la plataforma **Sanos y Salvos**. Su úni
 | TypeScript 5 | Tipado estático |
 | PostgreSQL 16 | Persistencia de credenciales y tokens |
 | TypeORM 0.3 | ORM y sincronización de esquema |
-| Bull + Redis | Cola de eventos desde ms-users (broker) |
-| ioredis | Cliente Redis para caché KV de perfiles |
+| RabbitMQ (aio-pika / amqplib) | Consumidor de eventos desde ms-users (exchange `user.events`) |
+| ioredis | Cliente Redis para caché KV de perfiles (`/api/auth/me`) |
 | jsonwebtoken | Generación y verificación de Access Tokens JWT |
 | bcrypt | Verificación de contraseñas |
 | Swagger / OpenAPI 3.0 | Documentación interactiva |
@@ -57,7 +57,7 @@ ms-auth/
 │   │   ├── RefreshToken.ts
 │   │   └── RevokedToken.ts
 │   ├── queue/
-│   │   └── consumers.ts            # Consumers de eventos desde ms-users
+│   │   └── consumers.ts            # Consumers RabbitMQ de eventos desde ms-users (exchange: user.events)
 │   ├── routes/
 │   │   └── auth.routes.ts
 │   ├── services/
@@ -111,6 +111,23 @@ Endpoints administrativos protegidos por `x-api-key`. **Desde v2.0.0** la sincro
 | `PATCH` | `/api/auth/credentials/:id/deactivate` | Legacy — desactivación vía evento `user.deleted` |
 | `DELETE` | `/api/auth/credentials/:id` | Emergencia — eliminar credencial huérfana |
 | `POST` | `/api/auth/interno/por-email` | **Activo** — usado por ms-soporte para resolver `credential_id` por email |
+
+---
+
+## Réplica de credenciales y eventos RabbitMQ
+
+`ms-auth` mantiene una réplica local de credenciales en su propia base de datos PostgreSQL, sincronizada de forma asíncrona con `ms-users` a través de RabbitMQ (exchange `user.events`, queue `ms-auth.user-events`, binding `user.#`).
+
+| Evento recibido | Acción |
+|---|---|
+| `user.registered` | Crea una nueva `Credential` con `CredentialFactory` |
+| `user.updated` | Actualiza datos cacheados (nombre, rol, etc.) |
+| `user.deleted` | Desactiva la credencial |
+| `user.password.changed` | Actualiza el hash de contraseña |
+
+Esta réplica permite que `ms-auth` autentique usuarios aunque `ms-users` esté caído. La fuente de verdad del perfil siempre es `ms-users`.
+
+> `REDIS_BROKER_URL` aparece en el `.env.example` pero no está activamente utilizada en el código actual. La cola se conecta directamente a RabbitMQ.
 
 ---
 
