@@ -1,3 +1,4 @@
+import { describe } from 'node:test';
 import { successResponse, errorResponse } from '../../utils/response';
 
 // Mock mínimo del Response de Express con encadenamiento status().json()

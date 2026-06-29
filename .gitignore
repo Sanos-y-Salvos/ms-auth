@@ -21,6 +21,4 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
-
-# Coverage
-coverage/
+.claude

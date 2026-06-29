@@ -6,6 +6,7 @@ jest.mock('../../services/auth.service', () => ({
   register: jest.fn(),
   updateRole: jest.fn(),
   deactivateCredential: jest.fn(),
+  activateCredential: jest.fn(),
   getMe: jest.fn(),
   deleteCredential: jest.fn(),
   getCredentialByEmail: jest.fn(),
@@ -208,6 +209,25 @@ describe('controllers/auth.controller', () => {
       const req: any = { params: { id: 'c1' } };
       const res = buildRes();
       await Controller.deactivateCredential(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+  });
+
+  // ============== activateCredential ==============
+  describe('activateCredential', () => {
+    it('responde 200 cuando se activa', async () => {
+      (AuthService.activateCredential as jest.Mock).mockResolvedValue(undefined);
+      const req: any = { params: { id: 'c1' } };
+      const res = buildRes();
+      await Controller.activateCredential(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('responde 404 si el servicio lanza', async () => {
+      (AuthService.activateCredential as jest.Mock).mockRejectedValue(new Error('no'));
+      const req: any = { params: { id: 'c1' } };
+      const res = buildRes();
+      await Controller.activateCredential(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
     });
   });
