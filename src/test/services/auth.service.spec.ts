@@ -288,7 +288,7 @@ describe('services/auth.service', () => {
     it('baja el flag is_active', async () => {
       credentialRepo.findOne.mockResolvedValue({ id: 'c1' });
       await AuthService.deactivateCredential('c1');
-      expect(credentialRepo.update).toHaveBeenCalledWith({ id: 'c1' }, { is_active: false });
+      expect(credentialRepo.update).toHaveBeenCalledWith({ id: 'c1' }, { is_active: false, status: 'inactive' });
     });
 
     it('lanza si la credencial no existe', async () => {
@@ -358,6 +358,20 @@ describe('services/auth.service', () => {
       credentialRepo.findOne.mockResolvedValue(null);
       const out = await AuthService.getCredentialByEmail('x@x.cl');
       expect(out).toBeNull();
+    });
+  });
+
+  // ============== activateCredential ==============
+  describe('activateCredential', () => {
+    it('activa la credencial con is_active true y status active', async () => {
+      credentialRepo.findOne.mockResolvedValue({ id: 'c1' });
+      await AuthService.activateCredential('c1');
+      expect(credentialRepo.update).toHaveBeenCalledWith({ id: 'c1' }, { is_active: true, status: 'active' });
+    });
+
+    it('lanza si la credencial no existe', async () => {
+      credentialRepo.findOne.mockResolvedValue(null);
+      await expect(AuthService.activateCredential('x')).rejects.toThrow('Credencial no encontrada');
     });
   });
 });
