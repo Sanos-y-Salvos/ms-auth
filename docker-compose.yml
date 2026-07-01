@@ -22,7 +22,7 @@ services:
   # ── ms-auth ──────────────────────────────────────────────────────────────────
   ms-auth:
     container_name: ms-auth
-    image: felruiz/ms-auth:latest
+    #image: felruiz/ms-auth:latest
     build:
       context: .
       dockerfile: Dockerfile

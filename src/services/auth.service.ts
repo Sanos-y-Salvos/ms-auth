@@ -19,7 +19,7 @@ const refreshTokenRepo = () => AppDataSource.getRepository(RefreshToken);
 const revokedTokenRepo = () => AppDataSource.getRepository(RevokedToken);
 
 // Tiempos de vida de los tokens
-const ACCESS_TOKEN_TTL = 15 * 60; // 15 minutos en segundos
+const ACCESS_TOKEN_TTL = 60 * 60; // 1 hora en segundos
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 días en segundos
 
 // Construye un refresh token nuevo (UUID + fecha de expiración)
